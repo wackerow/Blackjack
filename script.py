@@ -4,14 +4,14 @@ Blackjack Game
 import random
 import os
 from math import ceil
-
+import time
 
 card_values_dict = {"A": 11, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7,
                     "8": 8, "9": 9, "10": 10, "J": 10, "Q": 10, "K": 10}
 card_colors_dict = {"♠": "black", "♥": "red", "♦": "red", "♣": "black"}
 max_players = 4
 max_decks = 8
-clear = lambda: os.system('clear')  # on Linux System
+clear = lambda: os.system('clear')
 
 
 class Deck:
@@ -119,6 +119,7 @@ class Hand:
     """"""
     def __init__(self):
         self.cards = []
+        self.busted = False
 
     def __repr__(self):
         out_string = ""
@@ -149,10 +150,10 @@ def welcome():
     welcome_string = "WELCOME TO BLACKJACK!! (CASINO RULE EDITION)"
     print("\n" + "#" * len(welcome_string))
     print(f"{welcome_string}")
-    print("#" * len(welcome_string) + "\n\n")
+    print("#" * len(welcome_string) + "\n")
     print(" - Get 21 points on the player's first two cards (called a 'blackjack', without a dealer blackjack")
     print(" - Reach a final score higher than the dealer without exceeding 21")
-    print(" - Let the dealer draw additional cards until their hand exceeds 21 ('busted')")
+    print(" - Let the dealer draw additional cards until their hand exceeds 21 ('busted')\n")
 
 
 def deal_new_round(players, dealer, deck):
@@ -175,11 +176,6 @@ def end_round(players, dealer):
         player.reset_hand()
 
 
-def bust_or_21(hand, player):
-
-    return did_bust, hit_21
-
-
 def available_plays(hand, player):  # !! hand parameter part of player object
     """
     :param hand: Current hand
@@ -197,19 +193,15 @@ def available_plays(hand, player):  # !! hand parameter part of player object
     return False, False, ""
 
 
-def hit():
+def hit(deck, current_hand):
     pass
 
 
-def split():
+def split(deck):
     pass
 
 
-def double_down():
-    pass
-
-
-def stay():
+def double_down(deck):
     pass
 
 
@@ -233,14 +225,14 @@ def display_game_state(players, dealer, players_done=False):
             for card in hand.cards:
                 player_string += f"[{card.name}{card.suit}]"
             player_string += "\n"
-        print(f"\n{player_string}\n")
+        print(f"{player_string}")
 
 
 def balance_status(players):
-    print("\n")
+    print("")
     for player in players:
         print(f"{player.name:17.15}{player.balance:6d}")
-    print("\n")
+    print("")
 
 
 def deck_check(deck, num_decks):
@@ -278,8 +270,9 @@ def play_round(players, deck, all_players):
     # Check if dealer showing Ace:
     if dealer.active_hand[0].cards[1].value == 11:
         # Offer insurance bet:
+        print("Insurance? Type [y]es or press enter to pass...")
         for player in players:
-            if input("Insurance? Type [y]es or press enter to pass: ")[0].lower() == "y":
+            if input(f"{player.name}: ")[0].lower() == "y":  # TODO: [0] IndexError when input is null (enter)
                 if player.current_bet * 1.5 <= player.balance:
                     player.insurance_bet = player.current_bet // 2
                     print("Insurance bet placed.")
@@ -289,7 +282,7 @@ def play_round(players, deck, all_players):
     while True:
         # Now, check if Dealer hit Blackjack
         if dealer.active_hand[0].total() == 21:
-            print("Dealer has Blackjack!")
+            print(f"Dealer has Blackjack!  {dealer.active_hand[0]}")
             # Payout insurance
             for player in players:
                 player.balance += player.insurance_bet * 2
@@ -302,45 +295,68 @@ def play_round(players, deck, all_players):
                 player.insurance_bet = 0
 
         # Now check if any player hit Blackjack!
-        for player_idx in range(len(players)):
+        player_idx = 0
+        while player_idx < len(players):
             if players[player_idx].active_hands[0].total() == 21:
                 print(f"{players[player_idx].name} hit Blackjack!")
-                reward = int(ceil(players[player_idx].current_bet * 2.5))
+                reward = int(ceil(players[player_idx].current_bet * 1.5))
                 print(f"Rewarded {reward}\n")
                 players[player_idx].credit(reward)
+                # If Blackjack off of deal, remove player from round
                 players.pop(player_idx)
                 del reward
+            else:
+                player_idx += 1
 
-        # Time for game play (hit/stay/double/split)
+        # Time for Players to hit/stay/double/split/bust
         while len(players) > 0:
-            while len(players[0].active_hands) > 0:
+            current_player = players[0]
+            # Create array of player hands that still need to be played through
+            # Does not affect Player.active_hands, so they can be popped off: hands_to_play.pop(0)
+            hands_to_play = current_player.active_hands[:]
+            while len(hands_to_play) > 0:
                 # Focused on a single hand:
-                current_hand = players[0].active_hands[0]
-                current_player = players[0]
-                can_double_down, can_split, str_append = available_plays(current_hand, current_player)
-                # Display active user / hand:
-                print(f"{players[0].name}: {players[0].active_hands[0]}")
-                # Prompt user for action
-                while True
-                    move_selection = input(f"[H]it / [S]tay{str_append}: ").lower()
-                    if move_selection[0] == "h":  # HIT!
-                        hit(deck)
-                        break
-                    elif move_selection == "s":  # STAY!
-                        stay()
-                        break
-                    elif move_selection == "d" and can_double_down:  # DOUBLE-DOWN!
-                        double_down(deck)
-                        break
-                    elif move_selection == "l" and  can_split:  # SPLIT!
-                        split(deck)
-                        break
+                current_hand = hands_to_play[0]
+                stay = False
+                while current_hand.total() < 21 and not stay:
+                    can_double_down, can_split, str_append = available_plays(current_hand, current_player)
+                    # Display active user / hand:
+                    print(f"{current_player.name}: {current_hand}")
+                    # Prompt user for action
+                    while True:
+                        move_selection = input(f"[H]it / [S]tay{str_append}: ").lower()
+                        if move_selection in ("h", "hit"):  # HIT!
+                            hit(deck, current_hand)
+                            break
+                        elif move_selection in ("s", "stay"):  # STAY!
+                            stay = True
+                            break
+                        elif move_selection in ("d", "double", "double-down") and can_double_down:  # DOUBLE-DOWN!
+                            double_down(deck)
+                            break
+                        elif move_selection in ("l", "split") and can_split:  # SPLIT!
+                            split(deck)
+                            break
+                        else:
+                            continue
+                    # Calculate ask_again/21/bust?
+                    if current_hand.total() < 21:
+                        # Ask again
+                        pass
+                    elif current_hand.total() > 21:
+                        # Bust!
+                        # TODO: Automatically lose: Do not compare to dealer at end!
+                        pass
                     else:
-                        continue
-
+                        # 21!
+                        # Don't ask again, but must compare to dealer for win vs push
+                        pass
+                hands_to_play.pop(0)
             players.pop(0)
-
         break
+
+        # Dealer's turn (automated)
+        # TODO: time.sleep(1) in between playing cards
 
     end_round(all_players, dealer)
 
@@ -362,14 +378,14 @@ def play_game():
                 continue
             else:
                 break
-        except TypeError:
+        except:  # TypeError:
             print(f"Must be a number between 1 - {max_decks}.")
 
     # Input: How many players?
     while True:
         try:
             num_players = int(input("How many players? "))
-        except TypeError:
+        except:  # TypeError:
             print(f"Must be a number between 1 - {max_players}.")
         else:
             if num_players not in range(1, max_players + 1):
@@ -390,7 +406,7 @@ def play_game():
         all_players.append(Player(player_name))
 
     # Stall before starting game play
-    input("\nLet's play some Blackjack!! Press enter when ready... \n")
+    input("\nLet's play some Blackjack!! Press enter when ready...")
     balance_status(all_players)
 
     game_on = True
