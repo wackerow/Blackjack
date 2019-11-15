@@ -317,17 +317,26 @@ def play_round(players, deck, all_players):
                 # Focused on a single hand:
                 current_hand = players[0].active_hands[0]
                 current_player = players[0]
-                can_double, can_split, str_append = available_plays(current_hand, current_player)
+                can_double_down, can_split, str_append = available_plays(current_hand, current_player)
+                # Display active user / hand:
+                print(f"{players[0].name}: {players[0].active_hands[0]}")
                 # Prompt user for action
-                move_selection = input(f"{players[0].active_hands[0]}\n[H]it / [S]tay{str_append}: ")[0].lower()
-                if move_selection == "h":
-                    hit()
-                elif move_selection == "s":
-                    stay()
-                elif move_selection == "d":
-                    double_down()
-                elif move_selection == "l":
-                    split()
+                while True
+                    move_selection = input(f"[H]it / [S]tay{str_append}: ").lower()
+                    if move_selection[0] == "h":  # HIT!
+                        hit(deck)
+                        break
+                    elif move_selection == "s":  # STAY!
+                        stay()
+                        break
+                    elif move_selection == "d" and can_double_down:  # DOUBLE-DOWN!
+                        double_down(deck)
+                        break
+                    elif move_selection == "l" and  can_split:  # SPLIT!
+                        split(deck)
+                        break
+                    else:
+                        continue
 
             players.pop(0)
 
