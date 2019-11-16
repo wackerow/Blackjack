@@ -2,24 +2,26 @@
 Blackjack Game
 """
 import random
-from math import ceil
 import time
 
-card_values_dict = {"A": 11, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7,
+CARD_VALUES_DICT = {"A": 11, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7,
                     "8": 8, "9": 9, "10": 10, "J": 10, "Q": 10, "K": 10}
-card_colors_dict = {"♠": "black", "♥": "red", "♦": "red", "♣": "black"}
-max_players = 4
-max_decks = 8
+CARD_COLORS_DICT = {"♠": "black", "♥": "red", "♦": "red", "♣": "black"}
+MAX_PLAYERS = 4
+MAX_DECKS = 8
 
 
 class Deck:
-    """"""
+    """
+
+    """
+
     def __init__(self, deck_count=6):
         self.deck_count = deck_count  # Must be ≥1
         self.cards = []
         for _ in range(self.deck_count):
-            for suit in card_colors_dict.keys():
-                for name in card_values_dict.keys():
+            for suit in CARD_COLORS_DICT:
+                for name in CARD_VALUES_DICT:
                     self.cards.append(Card(name, suit))
         for _ in range(6):
             random.shuffle(self.cards)
@@ -32,19 +34,25 @@ class Deck:
 
 
 class Card:
-    """"""
+    """
+
+    """
+
     def __init__(self, name, suit):
         self.name = name
         self.suit = suit
-        self.value = card_values_dict[name]
-        self.color = card_colors_dict[suit]
+        self.value = CARD_VALUES_DICT[name]
+        self.color = CARD_COLORS_DICT[suit]
 
     def __repr__(self):
         return self.name + self.suit
 
 
 class Dealer:
-    """"""
+    """
+
+    """
+
     active_hand = []
 
     def __init__(self):
@@ -65,7 +73,10 @@ class Dealer:
 
 
 class Player:
-    """"""
+    """
+
+    """
+
     def __init__(self, name):
         self.name = name
         self.balance = 100
@@ -78,20 +89,26 @@ class Player:
         return self.name
 
     def place_bet(self, bet):
+        """
+        :param bet:
+        :return:
+        """
+
         if bet > self.balance:
             print(f"Insufficient funds to bet {bet}.\nCurrent Balance: {self.balance}")
             return False
-        elif bet <= 0 or bet % 2 != 0:
+        if bet <= 0 or bet % 2 != 0:
             print("Must be a positive even wager.")
-        else:
-            self.current_bet += bet
-            return True
+            return False
+        self.current_bet += bet
+        return True
 
     def credit(self, amount):  # NOTE: bet_per_hand = self.current_bet / len(self.active_hands)
         """
         :param amount: (self.current_bet / len(self.active_hands)) * Odds
         :return: None
         """
+
         self.balance += amount
 
     def debit(self, amount):  # NOTE: bet_per_hand = self.current_bet / len(self.active_hands)
@@ -99,9 +116,14 @@ class Player:
         :param amount: self.current_bet / len(self.active_hands
         :return: None
         """
+
         self.balance -= amount
 
     def reset_hand(self):
+        """
+        :return:
+        """
+
         self.current_bet = 0
         self.insurance_bet = 0
 
@@ -114,7 +136,10 @@ class Player:
 
 
 class Hand:
-    """"""
+    """
+
+    """
+
     def __init__(self):
         self.cards = []
         self.busted = False
@@ -255,12 +280,16 @@ def balance_status(players):
 
 
 def deck_check(deck, num_decks):
+    """
+    :param deck: Used deck object
+    :param num_decks: Selected number of decks during game initiation
+    :return: Deck object (either original, or new shuffled deck)
+    """
     if len(deck) < (num_decks * 10):
         # If low, delete old deck and initiate new deck
         del deck
         return Deck(num_decks)
-    else:
-        return deck
+    return deck
 
 
 def game_over(players):
@@ -281,7 +310,7 @@ def play_round(players, deck, all_players):
                 if player.place_bet(player_bet):
                     break
             except:
-                print(f"Must be an integer between 1 - {player.balance}.")
+                print(f"Must be an integer between 1 - {int(player.balance)}.")
 
     # All bets are placed, time to deal!
     deal_new_round(players, dealer, deck)
@@ -292,7 +321,7 @@ def play_round(players, deck, all_players):
         # Offer insurance bet:
         print("Insurance? Type [y]es or press enter to pass...")
         for player in players:
-            if input(f"{player.name}: ").lower() in ("y", "yes"):
+            if input(f"{player.name}? ").lower() in ("y", "yes"):
                 if player.current_bet * 1.5 <= player.balance:
                     player.insurance_bet = player.current_bet // 2
                     print("Insurance bet placed.")
@@ -328,9 +357,10 @@ def play_round(players, deck, all_players):
     while player_idx < len(players):
         if players[player_idx].active_hands[0].total() == 21:
             print(f"{players[player_idx].name} hit Blackjack!")
-            reward = int(ceil(players[player_idx].current_bet * 1.5))
+            reward = int(players[player_idx].current_bet * 1.5)
             print(f"Rewarded {reward}\n")
             players[player_idx].credit(reward)
+            players[player_idx].current_bet = 0
             # If Blackjack off of deal, remove player from round
             players.pop(player_idx)
             del reward
@@ -359,39 +389,33 @@ def play_round(players, deck, all_players):
                         hit(deck, current_hand)
                         print(f"{current_player.name}: {current_hand}")
                         break
-                    elif move_selection in ("s", "stay"):  # STAY!
+                    if move_selection in ("s", "stay"):  # STAY!
                         stay = True
                         break
-                    elif move_selection in ("d", "double", "double-down") and can_double_down:  # DOUBLE-DOWN!
+                    if move_selection in ("d", "double", "double-down") and can_double_down:  # DOUBLE-DOWN!
                         # Adjust current bet (double the bet on given hand)
                         current_player.current_bet += (current_player.current_bet / len(current_player.active_hands))
                         hit(deck, current_hand)
                         print(f"{current_player.name}: {current_hand}")
                         stay = True
                         break
-                    elif move_selection in ("l", "split") and can_split:  # SPLIT!
+                    if move_selection in ("l", "split") and can_split:  # SPLIT!
                         # Adjust current bet (double the bet on given hand)
                         current_player.current_bet += (current_player.current_bet / len(current_player.active_hands))
                         hands_to_play = split(deck, current_hand, hands_to_play, current_player)
                         break
-                    else:
-                        continue
+
                 # Calculate ask_again/21/bust?
                 if current_hand.total() == 21:
+                    print("21!")
                     stay = True
-                elif current_hand.total() > 21:
+                if current_hand.total() > 21:
                     # Bust!
                     print("Bust!")
-                    current_player.current_bet -= current_player.current_bet / len(current_player.active_hands)
-                    current_player.debit(current_player.current_bet / len(current_player.active_hands))
+                    current_player.debit(int(current_player.current_bet / len(current_player.active_hands)))
+                    current_player.current_bet -= int(current_player.current_bet / len(current_player.active_hands))
                     bust_index = current_player.active_hands.index(current_hand)
                     current_player.active_hands.pop(bust_index)
-                    pass
-                else:
-                    # 21!
-                    print("21!")
-                    # Don't ask again, but must compare to dealer for win vs push
-                    pass
             hands_to_play.pop(0)
         players.pop(0)
 
@@ -401,20 +425,20 @@ def play_round(players, deck, all_players):
     while True:
         if dealer.active_hand[0].total() > 21:
             # Dealer Busts!
+            print("Dealer busts!")
             dealer_bust = True
             break
-        if dealer.active_hand[0].total() < 17 or dealer.active_hand[0].soft_17():
+        elif dealer.active_hand[0].total() < 17 or dealer.active_hand[0].soft_17():
             # Dealer Hits
             hit(deck, dealer.active_hand[0])
             time.sleep(2)
             print(f"Dealer: {dealer.active_hand[0]}")
         else:
-            # Dealer Stays
             break
 
     # If dealer busted, reward all active hands
     if dealer_bust:
-        for player in players:
+        for player in all_players:
             player.credit(player.current_bet)
     else:
         # Compare dealer hand to active player hands
@@ -441,26 +465,24 @@ def play_game():
     while True:
         try:
             num_decks = int(input("How many decks would you like to play with? "))
-            if num_decks not in range(1, max_decks + 1):
-                print(f"Must be between 1 and {max_decks} decks.")
+            if num_decks not in range(1, MAX_DECKS + 1):
+                print(f"Must be between 1 and {MAX_DECKS} decks.")
                 continue
-            else:
-                break
+            break
         except:  # TypeError:
-            print(f"Must be a number between 1 - {max_decks}.")
+            print(f"Must be a number between 1 - {MAX_DECKS}.")
 
     # Input: How many players?
     while True:
         try:
             num_players = int(input("How many players? "))
         except:  # TypeError:
-            print(f"Must be a number between 1 - {max_players}.")
+            print(f"Must be a number between 1 - {MAX_PLAYERS}.")
         else:
-            if num_players not in range(1, max_players + 1):
-                print(f"Must be between 1 and {max_players} players.")
+            if num_players not in range(1, MAX_PLAYERS + 1):
+                print(f"Must be between 1 and {MAX_PLAYERS} players.")
                 continue
-            else:
-                break
+            break
 
     # Initiate new Deck object
     deck = Deck(num_decks)
@@ -507,9 +529,10 @@ play_game()
 # TODO: During game play, edit how/when cards are displayed
 
 # TODO: Double-down bet DIFFERENT than others... if that hand won, must reward double
-#   i.e.    [9][9]              -- current_bet = 10, len() = 1, bet/hand = 10
-#   Split:  [9][2]      [9][K]  -- current_bet = 20, len() = 2, bet/hand = 10
-#   Double: [9][2][Q]   [9][K]  -- current_bet = 30, len() = 2, bet/hand = 15 !!!!
+#   i.e.    [9][9]              -- current_bet = [10], len() = 1, bet/hand = 10
+#   Split:  [9][2]      [9][K]  -- current_bet = [10, 10], len() = 2, bet/hand = 10
+#   Double: [9][2][Q]   [9][K]  -- current_bet = [20, 10], len() = 2, bet/hand = 15 !!!!
 #   _
 #   Dealer: [J][10]             -- Payout would be:     15
 #                               -- Payout SHOULD be:    20
+#   Consider: change current_bet = 30 -> current_bet[20,10]
