@@ -1,26 +1,29 @@
 """
 Blackjack Game
 """
+
+# TODO: During game play, edit how/when cards are displayed
+
 import random
 import time
 
 CARD_VALUES_DICT = {"A": 11, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7,
                     "8": 8, "9": 9, "10": 10, "J": 10, "Q": 10, "K": 10}
-CARD_COLORS_DICT = {"♠": "black", "♥": "red", "♦": "red", "♣": "black"}
 MAX_PLAYERS = 4
 MAX_DECKS = 8
+INITIAL_BALANCE = 500
 
 
 class Deck:
     """
-
+    Playing deck for game play. Contains Card objects in a shuffled array
     """
 
     def __init__(self, deck_count=6):
         self.deck_count = deck_count  # Must be ≥1
         self.cards = []
         for _ in range(self.deck_count):
-            for suit in CARD_COLORS_DICT:
+            for suit in ["♠", "♥", "♦", "♣"]:
                 for name in CARD_VALUES_DICT:
                     self.cards.append(Card(name, suit))
         for _ in range(6):
@@ -35,54 +38,44 @@ class Deck:
 
 class Card:
     """
-
+    Individual playing card object, contained in a Deck or Hand
     """
 
     def __init__(self, name, suit):
         self.name = name
         self.suit = suit
         self.value = CARD_VALUES_DICT[name]
-        self.color = CARD_COLORS_DICT[suit]
 
     def __repr__(self):
-        return self.name + self.suit
+        return f"[{self.name}{self.suit}]"
 
 
 class Dealer:
     """
-
+    Initiated with each round of play, containing one hand
     """
 
-    active_hand = []
-
     def __init__(self):
-        pass
+        self.active_hand = Hand()
 
     def __repr__(self):
         return "Dealer"
 
-    def deal_new(self, hand):
-        self.active_hand.append(hand)
-
-    def reset_hand(self):
-        # Delete active "hand" object
-        del self.active_hand[0]
-
-        # Clear active_hand array
-        self.active_hand.clear()
-
 
 class Player:
     """
-
+    Player object intiated at the beginning of the game
+    Starts with one hand, but may have multiple after splitting
+    Also keeps current bets, players running game balance
     """
 
-    def __init__(self, name):
+    def __init__(self, name, balance):
         self.name = name
-        self.balance = 100
-        self.current_bet = 0
+        self.balance = balance
+        self.current_bet = 0  # TODO: Change current_bet to current_bets array
+        # self.current_bets = []
         self.active_hands = []
-        # NOTE: bet_per_hand = self.current_bet / len(self.active_hands)
+        # TODO: Consider merging "insurance_bet" into new "current_bets" array
         self.insurance_bet = 0  # May be up to half self.current_bet
 
     def __repr__(self):
@@ -90,8 +83,9 @@ class Player:
 
     def place_bet(self, bet):
         """
-        :param bet:
-        :return:
+        Checks of player has enough funds to place declared wager
+        :param bet: Integer bet placed at start of round
+        :return: Boolean (True if funds sufficient, else False)
         """
 
         if bet > self.balance:
@@ -103,17 +97,17 @@ class Player:
         self.current_bet += bet
         return True
 
-    def credit(self, amount):  # NOTE: bet_per_hand = self.current_bet / len(self.active_hands)
+    def credit(self, amount):
         """
-        :param amount: (self.current_bet / len(self.active_hands)) * Odds
+        :param amount: Integer to add to balance
         :return: None
         """
 
         self.balance += amount
 
-    def debit(self, amount):  # NOTE: bet_per_hand = self.current_bet / len(self.active_hands)
+    def debit(self, amount):
         """
-        :param amount: self.current_bet / len(self.active_hands
+        :param amount: Integer to remove from balance
         :return: None
         """
 
@@ -121,7 +115,8 @@ class Player:
 
     def reset_hand(self):
         """
-        :return:
+        Resets current bets and clears all Hands
+        :return: None
         """
 
         self.current_bet = 0
@@ -137,7 +132,7 @@ class Player:
 
 class Hand:
     """
-
+    Array of cards making up a given hand on the playing board
     """
 
     def __init__(self):
@@ -147,13 +142,17 @@ class Hand:
     def __repr__(self):
         out_string = ""
         for card in self.cards:
-            out_string += f"[{card.name}{card.suit}]"
+            out_string += f"{card}"
         return out_string
 
     def __len__(self):
         return len(self.cards)
 
     def total(self):
+        """
+        Takes into account flexibility of Ace values
+        :return: Integer total value of Hand
+        """
         value_sum = 0
         aces = 0
         for card in self.cards:
@@ -166,6 +165,10 @@ class Hand:
         return value_sum
 
     def soft_17(self):
+        """
+        Takes into account flexibility of Ace values
+        :return: Boolean (True if Hand is a soft 17, else False)
+        """
         value_sum = 0
         aces = 0
         for card in self.cards:
@@ -178,46 +181,64 @@ class Hand:
         return value_sum == 17 and aces == 1
 
     def deal_card(self, card):
+        """
+        :param card: Card object to add to Hand
+        :return: None
+        """
         self.cards.append(card)
 
 
 def welcome():
-    """"""
+    """
+    Welcome message at beginning of game with basic win conditions
+    :return: None
+    """
     welcome_string = "WELCOME TO BLACKJACK!! (CASINO RULE EDITION)"
     print("\n" + "#" * len(welcome_string))
     print(f"{welcome_string}")
     print("#" * len(welcome_string) + "\n")
-    print(" - Get 21 points on the player's first two cards (called a 'blackjack', without a dealer blackjack")
+    print(" - Get 21 points on the player's first two cards \
+(called a 'blackjack', without a dealer blackjack")
     print(" - Reach a final score higher than the dealer without exceeding 21")
     print(" - Let the dealer draw additional cards until their hand exceeds 21 ('busted')\n")
 
 
 def deal_new_round(players, dealer, deck):
-    """"""
-    # Initiate new hand for each player and dealer
+    """
+    :param players: Array of Player objects participating in round of betting
+    :param dealer: Dealer object
+    :param deck: Deck object
+    :return: None
+    """
+
+    # Initiate new hand for each player
     for player in players:
         player.active_hands.append(Hand())
-    dealer.active_hand.append(Hand())
 
     # Deal 2 cards to each player and dealer
     for _ in range(2):
         for player in players:
             player.active_hands[0].deal_card(deck.cards.pop())
-        dealer.active_hand[0].deal_card(deck.cards.pop())
+        dealer.active_hand.deal_card(deck.cards.pop())
 
 
 def end_round(players, dealer):
-    """"""
-    dealer.reset_hand()
+    """
+    :param players: Array of all Player objects
+    :param dealer: Dealer object
+    :return: None
+    """
+
     for player in players:
         player.reset_hand()
+    del dealer
 
 
-def available_plays(hand, player):  # !! hand parameter part of player object
+def available_plays(hand, player):
     """
     :param hand: Current hand
     :param player: Current player
-    :return: Boolean tuple: (can_double_down, can_split)
+    :return: Tuple: (Bool can_double_down, Bool can_split, String to append)
     """
 
     # Able to double bet?
@@ -231,13 +252,27 @@ def available_plays(hand, player):  # !! hand parameter part of player object
 
 
 def hit(deck, current_hand):
-    """"""
+    """
+    :param deck: Deck object
+    :param current_hand: Hand object
+    :return: Hand object
+    """
+
     current_hand.deal_card(deck.cards.pop())
     return current_hand
 
 
 def split(deck, hand_to_split, hands_to_play, player):
-    """"""
+    """
+    Split hand into two. Allowed if values on initial deal are equal.
+    TODO: Double-check split logic
+    :param deck: Deck object
+    :param hand_to_split: Specific Hand object to split
+    :param hands_to_play: Array of player hands that remain to be played out
+    :param player: Player object containing current Hand
+    :return: New array of player hands remaining to be played out
+    """
+
     idx_active = player.active_hands.index(hand_to_split)
     idx_to_play = hands_to_play.index(hand_to_split)
     card_to_split_off = hand_to_split.cards.pop(1)
@@ -251,15 +286,22 @@ def split(deck, hand_to_split, hands_to_play, player):
     return hands_to_play
 
 
-def display_game_state(players, dealer, players_done=False):
-    """"""
+def display_game_state(players, dealer, betting_finished=False):
+    """
+    Displays Blackjack table
+    :param players: Array of Player objects
+    :param dealer: Dealer object
+    :param betting_finished: Boolean to display Dealer down card or not
+    :return:
+    """
+
     # Print Dealer
     dealer_string = "Dealer: "
-    if players_done:
-        for card in dealer.active_hand[0].cards:
-            dealer_string += f"[{card.name}{card.suit}]"
+    if betting_finished:
+        for card in dealer.active_hand.cards:
+            dealer_string += f"{card}"
     else:
-        dealer_string += f"[{dealer.active_hand[0].cards[1].name}{dealer.active_hand[0].cards[1].suit}]"
+        dealer_string += f"{dealer.active_hand.cards[1]}"
     print(f"\n{dealer_string}\n")
 
     # Print Players
@@ -267,12 +309,18 @@ def display_game_state(players, dealer, players_done=False):
         player_string = f"{player.name}\n"
         for hand in player.active_hands:
             for card in hand.cards:
-                player_string += f"[{card.name}{card.suit}]"
+                player_string += f"{card}"
             player_string += "\n"
         print(f"{player_string}")
 
 
 def balance_status(players):
+    """
+    Displays current balance of each player
+    :param players: Array of Player objects
+    :return: None
+    """
+
     print("")
     for player in players:
         print(f"{player.name:17.15}{int(player.balance):6d}")
@@ -285,6 +333,7 @@ def deck_check(deck, num_decks):
     :param num_decks: Selected number of decks during game initiation
     :return: Deck object (either original, or new shuffled deck)
     """
+
     if len(deck) < (num_decks * 10):
         # If low, delete old deck and initiate new deck
         del deck
@@ -293,11 +342,23 @@ def deck_check(deck, num_decks):
 
 
 def game_over(players):
+    """
+    :param players: Array of all Player objects
+    :return: None
+    """
     print("GAME OVER!\nThe final balances are:\n")
     balance_status(players)
 
 
 def play_round(players, deck, all_players):
+    """
+    Majority of game play contained within
+    :param players: Array of Player objects participating in round
+    :param deck: Deck object
+    :param all_players: Array of all Player objects
+    :return:
+    """
+
     # Initiate dealer object
     dealer = Dealer()
 
@@ -317,7 +378,7 @@ def play_round(players, deck, all_players):
     display_game_state(players, dealer)
 
     # Check if dealer showing Ace:
-    if dealer.active_hand[0].cards[1].value == 11:
+    if dealer.active_hand.cards[1].value == 11:
         # Offer insurance bet:
         print("Insurance? Type [y]es or press enter to pass...")
         for player in players:
@@ -329,8 +390,8 @@ def play_round(players, deck, all_players):
                     print("Sorry, not enough funds.")
 
     # Now, check if Dealer hit Blackjack
-    if dealer.active_hand[0].total() == 21:
-        print(f"Dealer has Blackjack!  {dealer.active_hand[0]}")
+    if dealer.active_hand.total() == 21:
+        print(f"Dealer has Blackjack!  {dealer.active_hand}")
         # Payout insurance and end round
         while len(players) > 0:
             players[0].credit(players[0].insurance_bet * 2)
@@ -345,7 +406,7 @@ def play_round(players, deck, all_players):
             players[0].current_bet = 0
             players.pop(0)
     else:
-        if dealer.active_hand[0].cards[1].value == 11:
+        if dealer.active_hand.cards[1].value == 11:
             print("Dealer does not have Blackjack, insurance bets collected.")
         # Collect insurance
         for player in players:
@@ -420,19 +481,19 @@ def play_round(players, deck, all_players):
         players.pop(0)
 
     # Dealer's turn (automated)
-    print(f"Dealer: {dealer.active_hand[0]}")
+    print(f"Dealer: {dealer.active_hand}")
     dealer_bust = False
     while True:
-        if dealer.active_hand[0].total() > 21:
+        if dealer.active_hand.total() > 21:
             # Dealer Busts!
             print("Dealer busts!")
             dealer_bust = True
             break
-        elif dealer.active_hand[0].total() < 17 or dealer.active_hand[0].soft_17():
+        if dealer.active_hand.total() < 17 or dealer.active_hand.soft_17():
             # Dealer Hits
-            hit(deck, dealer.active_hand[0])
+            hit(deck, dealer.active_hand)
             time.sleep(2)
-            print(f"Dealer: {dealer.active_hand[0]}")
+            print(f"Dealer: {dealer.active_hand}")
         else:
             break
 
@@ -444,19 +505,22 @@ def play_round(players, deck, all_players):
         # Compare dealer hand to active player hands
         for player in all_players:
             for hand in player.active_hands:
-                if hand.total() > dealer.active_hand[0].total():
+                if hand.total() > dealer.active_hand.total():
                     # Player hand wins
                     player.credit(player.current_bet / len(player.active_hands))
-                elif hand.total() < dealer.active_hand[0].total():
+                elif hand.total() < dealer.active_hand.total():
                     # Player hand loses
                     player.debit(player.current_bet / len(player.active_hands))
 
     # End of round clean-up
     end_round(all_players, dealer)
-    del dealer
 
 
 def play_game():
+    """
+    Backbone of game play. Run this to play game.
+    :return: None
+    """
 
     # Introduction
     welcome()
@@ -493,7 +557,7 @@ def play_game():
         # Input: Player name?
         player_name = input(f"Enter name for Player {player + 1}: ")
         # Append go players list
-        all_players.append(Player(player_name))
+        all_players.append(Player(player_name, INITIAL_BALANCE))
 
     # Stall before starting game play
     input("\nLet's play some Blackjack!! Press enter when ready...")
@@ -525,14 +589,3 @@ def play_game():
 
 
 play_game()
-
-# TODO: During game play, edit how/when cards are displayed
-
-# TODO: Double-down bet DIFFERENT than others... if that hand won, must reward double
-#   i.e.    [9][9]              -- current_bet = [10], len() = 1, bet/hand = 10
-#   Split:  [9][2]      [9][K]  -- current_bet = [10, 10], len() = 2, bet/hand = 10
-#   Double: [9][2][Q]   [9][K]  -- current_bet = [20, 10], len() = 2, bet/hand = 15 !!!!
-#   _
-#   Dealer: [J][10]             -- Payout would be:     15
-#                               -- Payout SHOULD be:    20
-#   Consider: change current_bet = 30 -> current_bet[20,10]
