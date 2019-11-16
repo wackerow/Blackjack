@@ -194,7 +194,8 @@ def available_plays(hand, player):  # !! hand parameter part of player object
 
 
 def hit(deck, current_hand):
-    pass
+    current_hand.deal_card(deck.cards.pop())
+    return current_hand
 
 
 def split(deck):
@@ -447,3 +448,5 @@ play_game()
 
 # TODO: If a hand wins, credit() amount and debit that from current_bet
 # TODO: At end of round: run debit() for current_bet
+
+# TODO: During game play, edit how/when cards are displayed
