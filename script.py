@@ -1,5 +1,7 @@
 """
-Blackjack Game
+Python Blackjack Game
+Created by Paul Wackerow
+Copyright (c) 2019.
 """
 
 # TODO: During game play, edit how/when cards are displayed
