@@ -2,9 +2,11 @@
 Python Blackjack Game
 Created by Paul Wackerow
 Copyright (c) 2019.
+
+TODO: During game play, tidy how/when cards are displayed
 """
 
-# TODO: During game play, tidy how/when cards are displayed
+# pylint: disable=line-too-long
 
 import random
 import time
@@ -118,6 +120,7 @@ class Player:
         """
         :return: True if patient was dealt a natural blackjack
         """
+
         return len(self.active_hands) == 1 and len(self.active_hands[0]) == 2 and self.active_hands[0].total() == 21
 
 
@@ -182,6 +185,10 @@ class Hand:
         self.cards.append(card)
 
     def is_busted(self):
+        """
+        :return: True if hand is busted
+        """
+
         return self.total() > 21
 
 
@@ -437,14 +444,15 @@ def play_round(players, deck, all_players):
             players.pop(0)
         end_round(all_players, dealer_hand)
         return
-    else:
-        # Dealer does not have Blackjack, but insurance was offered
-        if dealer_hand.cards[1].value == 11:
-            print("Dealer does not have Blackjack, insurance bets collected.")
-        # Collect insurance
-        for player in players:
-            player.debit(player.insurance_bet)
-            player.insurance_bet = 0
+
+    # Dealer does not have Blackjack, but insurance was offered
+    if dealer_hand.cards[1].value == 11:
+        print("Dealer does not have Blackjack, insurance bets collected.")
+
+    # Collect and reset insurance bets
+    for player in players:
+        player.debit(player.insurance_bet)
+        player.insurance_bet = 0
 
     # Now check if any player hit Blackjack!
     player_idx = 0
